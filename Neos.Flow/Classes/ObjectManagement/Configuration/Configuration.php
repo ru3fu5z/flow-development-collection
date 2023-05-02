@@ -13,6 +13,7 @@ namespace Neos\Flow\ObjectManagement\Configuration;
 
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Configuration\Exception\InvalidConfigurationException;
+use Neos\Flow\Core\Bootstrap;
 
 /**
  * Flow Object Configuration
@@ -113,11 +114,13 @@ class Configuration
      */
     public function __construct($objectName, $className = null)
     {
-        $backtrace = debug_backtrace();
-        if (isset($backtrace[1]['object'])) {
-            $this->configurationSourceHint = get_class($backtrace[1]['object']);
-        } elseif (isset($backtrace[1]['class'])) {
-            $this->configurationSourceHint = $backtrace[1]['class'];
+        if (!Bootstrap::$staticObjectManager->getContext()->isProduction()) {
+            $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1);
+            if (isset($backtrace[1]['object'])) {
+                $this->configurationSourceHint = get_class($backtrace[1]['object']);
+            } elseif (isset($backtrace[1]['class'])) {
+                $this->configurationSourceHint = $backtrace[1]['class'];
+            }
         }
 
         $this->objectName = $objectName;
