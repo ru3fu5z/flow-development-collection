@@ -7,7 +7,7 @@
 namespace PHPSTORM_META {
 
     override(
-        \Neos\Flow\ObjectManagement\ObjectManagerInterface::get(),
+        \Psr\Container\ContainerInterface::get(),
         map(['' => '@'])
     );
 
