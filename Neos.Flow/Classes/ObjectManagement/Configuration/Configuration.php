@@ -13,7 +13,6 @@ namespace Neos\Flow\ObjectManagement\Configuration;
 
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Configuration\Exception\InvalidConfigurationException;
-use Neos\Flow\Core\Bootstrap;
 
 /**
  * Flow Object Configuration
