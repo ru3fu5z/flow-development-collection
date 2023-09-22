@@ -867,6 +867,8 @@ class Scripts
 
         echo sprintf("realpath php bin %s\n", var_export($realPhpBinary, true));
 
+        echo sprintf("php bin %s", PHP_BINARY);
+
         // if ($realPhpBinary === false) {
             // bypass with exec open_basedir restriction
         exec(PHP_BINARY . ' -r "echo realpath(PHP_BINARY);"', $output);
