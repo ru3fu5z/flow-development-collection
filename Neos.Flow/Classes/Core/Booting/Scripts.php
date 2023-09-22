@@ -782,7 +782,7 @@ class Scripts
     public static function buildPhpCommand(array $settings): string
     {
         if (isset(static::$builtPhpCommand)) {
-            return static::$builtPhpCommand;
+            // return static::$builtPhpCommand;
         }
 
         $subRequestEnvironmentVariables = [
@@ -822,6 +822,17 @@ class Scripts
 
         static::ensureWebSubrequestsUseCurrentlyRunningPhpVersion($command);
 
+        if (isset(static::$builtPhpCommand)) {
+
+            \var_dump(["cache was" => static::$builtPhpCommand, "but using" => $command, "core settings" => $settings['core']]);
+            
+            // return static::$builtPhpCommand;
+        } else {
+            \var_dump(["build command first time" => $command, "core settings" => $settings['core']]);
+
+            
+        }
+        
         return static::$builtPhpCommand = $command;
     }
 
