@@ -830,7 +830,7 @@ class Scripts
      * This avoids config errors where users forget to set Neos.Flow.core.phpBinaryPathAndFilename in CLI.
      *
      * @param string $phpBinaryPathAndFilename
-     * @throws FlowException
+     * @throws Exception\SubProcessException in case the php binary doesn't exist / is a different one for the current cli request
      */
     protected static function ensureCLISubrequestsUseCurrentlyRunningPhpBinary($phpBinaryPathAndFilename)
     {
@@ -839,14 +839,32 @@ class Scripts
             return;
         }
 
-        // Ensure the actual PHP binary is known before checking if it is correct. If empty, we ignore it because it is checked later in the script.
-        if (strlen($phpBinaryPathAndFilename) === 0) {
-            return;
+        // Ensure the actual PHP binary is known before checking if it is correct.
+        if (!$phpBinaryPathAndFilename || strlen($phpBinaryPathAndFilename) === 0) {
+            throw new Exception\SubProcessException('"Neos.Flow.core.phpBinaryPathAndFilename" is not set.', 1689676816060);
         }
 
+        $command = [];
+        if (PHP_OS_FAMILY !== 'Windows') {
+            // Handle possible fast cgi: send empty stdin to close possible fast cgi server
+            //
+            // in case the phpBinaryPathAndFilename points to a fast cgi php binary we will get caught in an endless process
+            // the fast cgi will expect input from the stdin and otherwise continue listening
+            // to close the stdin we send an empty string
+            // related https://bugs.php.net/bug.php?id=71209
+            $command[] = 'echo "" | ';
+        }
+        $command[] = $phpBinaryPathAndFilename;
+        $command[] = <<<'EOF'
+        -r "echo realpath(PHP_BINARY);"
+        EOF;
+        $command[] = '2>&1'; // Output errors in response
+
         // Try to resolve which binary file PHP is pointing to
-        exec($phpBinaryPathAndFilename . ' -r "echo realpath(PHP_BINARY);"', $output, $result);
-        if ($result === 0 && sizeof($output) === 1) {
+        $output = [];
+        exec(join(' ', $command), $output, $result);
+
+        if ($result === 0 && count($output) === 1) {
             // Resolve any wrapper
             $configuredPhpBinaryPathAndFilename = $output[0];
         } else {
@@ -864,23 +882,14 @@ class Scripts
 
         // stfu to avoid possible open_basedir restriction https://github.com/neos/flow-development-collection/pull/2491
         $realPhpBinary = @realpath(PHP_BINARY);
-
-        echo sprintf("realpath php bin %s\n", var_export($realPhpBinary, true));
-
-        echo sprintf("php bin %s", PHP_BINARY);
-
-        // if ($realPhpBinary === false) {
+        if ($realPhpBinary === false) {
             // bypass with exec open_basedir restriction
-        exec(PHP_BINARY . ' -r "echo realpath(PHP_BINARY);"', $output);
-        $realPhpBinary = $output[0];
-        // }
-
-        echo sprintf("final php bin %s\n", var_export($realPhpBinary, true));
-
-        echo sprintf("configured php bin path %s\n", var_export($configuredPhpBinaryPathAndFilename, true));
-
+            $output = [];
+            exec(PHP_BINARY . ' -r "echo realpath(PHP_BINARY);"', $output);
+            $realPhpBinary = $output[0];
+        }
         if (strcmp($realPhpBinary, $configuredPhpBinaryPathAndFilename) !== 0) {
-            throw new FlowException(sprintf(
+            throw new Exception\SubProcessException(sprintf(
                 'You are running the Flow CLI with a PHP binary different from the one Flow is configured to use internally. ' .
                 'Flow has been run with "%s", while the PHP version Flow is configured to use for subrequests is "%s". Make sure to configure Flow to ' .
                 'use the same PHP binary by setting the "Neos.Flow.core.phpBinaryPathAndFilename" configuration option to "%s". Flush the ' .
@@ -890,8 +899,6 @@ class Scripts
                 $realPhpBinary
             ), 1536303119);
         }
-
-        echo "i surfive \n";
     }
 
     /**
